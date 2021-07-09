@@ -1,7 +1,7 @@
 version: '3.7'
 services:
     mirakurun:
-        image: chinachu/mirakurun
+        build: ./mirakurun
         cap_add:
             - SYS_ADMIN
             - SYS_NICE
@@ -15,7 +15,10 @@ services:
             TZ: "Asia/Tokyo"
         devices:
             - /dev/bus:/dev/bus
-            - /dev/dvb:/dev/dvb
+            - /dev/px4video0:/dev/px4video0
+            - /dev/px4video1:/dev/px4video1
+            - /dev/px4video2:/dev/px4video2
+            - /dev/px4video3:/dev/px4video3
         restart: always
         logging:
             driver: json-file
@@ -49,15 +52,37 @@ services:
             - ./epgstation/thumbnail:/app/thumbnail
             - ./epgstation/logs:/app/logs
             - ./recorded:/app/recorded
+            - ./data:/data:rw,shared
         environment:
             TZ: "Asia/Tokyo"
         depends_on:
             - mirakurun
             - mysql
+            - rclone
         ports:
             - "8888:8888"
             - "8889:8889"
         #user: "1000:1000"
+        restart: always
+
+    rclone:
+        image: rclone/rclone
+        devices:
+        - /dev/fuse
+        volumes:
+        - /etc/passwd:/etc/passwd:ro
+        - /etc/group:/etc/group:ro
+        - ./rclone:/config/rclone
+        - ./data:/data:rw,shared
+        cap_add:
+        - SYS_ADMIN
+        security_opt:
+        - apparmor:unconfined
+        command:
+        - mount
+        - "gdrive:RecordedTV"
+        - /data/mount
+        - --allow-other
         restart: always
 
 volumes:
